@@ -21,7 +21,7 @@ load_dotenv()
 RAW_DIR = Path(__file__).parent.parent / "data" / "raw"
 COLLECTION_NAME = "garageai_2018_audi_a4"
 QDRANT_PATH = Path(__file__).parent.parent / ".qdrant_data"
-EMBEDDING_MODEL = "text-embedding-3-small"
+EMBEDDING_MODEL = "text-embedding-ada-002"
 EMBEDDING_DIM = 1536
 
 
@@ -62,12 +62,25 @@ def load_text_files() -> list[Document]:
                     ))
         else:
             # Forum posts, articles, etc.
-            loader = TextLoader(str(txt_path))
-            text_docs = loader.load()
-            for doc in text_docs:
-                doc.metadata["source_type"] = "community_knowledge"
-                doc.metadata["filename"] = txt_path.name
-            docs.extend(text_docs)
+            content = txt_path.read_text()
+            source_type = "community_knowledge"
+
+            # Extract thread context if present (first line before ---)
+            thread_context = ""
+            if content.startswith("THREAD CONTEXT:"):
+                parts = content.split("\n---\n", 1)
+                thread_context = parts[0].replace("THREAD CONTEXT:", "").strip()
+                content = parts[1] if len(parts) > 1 else content
+
+            doc = Document(
+                page_content=content.strip(),
+                metadata={
+                    "source_type": source_type,
+                    "filename": txt_path.name,
+                    "thread_context": thread_context,
+                }
+            )
+            docs.append(doc)
 
     return docs
 
@@ -85,6 +98,13 @@ def chunk_documents(docs: list[Document]) -> list[Document]:
     other_docs = [d for d in docs if d.metadata.get("source_type") != "nhtsa_data"]
 
     chunked = splitter.split_documents(other_docs)
+
+    # Prepend thread context to forum chunks so each chunk knows what thread it came from
+    for chunk in chunked:
+        ctx = chunk.metadata.get("thread_context", "")
+        if ctx:
+            chunk.page_content = f"[Thread: {ctx}]\n\n{chunk.page_content}"
+
     chunked.extend(nhtsa_docs)
 
     print(f"  Total chunks: {len(chunked)} ({len(nhtsa_docs)} NHTSA + {len(chunked) - len(nhtsa_docs)} other)")

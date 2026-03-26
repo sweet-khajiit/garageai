@@ -19,7 +19,7 @@ load_dotenv()
 
 COLLECTION_NAME = "garageai_2018_audi_a4"
 QDRANT_PATH = ".qdrant_data"
-EMBEDDING_MODEL = "text-embedding-3-small"
+EMBEDDING_MODEL = "text-embedding-ada-002"
 LLM_MODEL = "gpt-4o-mini"
 TOP_K = 6
 
@@ -73,7 +73,14 @@ PROMPT_TEMPLATE = ChatPromptTemplate.from_messages([
 
 User question: {question}
 
-Provide a helpful, sourced answer. Cite whether info comes from OEM docs, NHTSA data, or community knowledge."""),
+Instructions:
+- Answer the SPECIFIC question asked. Do not repeat general maintenance advice unless directly asked for it.
+- Only include information from the context that is directly relevant to the question.
+- If the question is narrow (e.g., about one component), go deep on that topic rather than listing everything you know.
+- If the question is broad (e.g., "what should I prioritize"), organize by urgency and be concise.
+- Cite source type (OEM, NHTSA, community, informational article) naturally in your answer.
+- Do NOT use headers or bullet points for every response — match the complexity of your formatting to the complexity of the question. Simple questions get conversational answers.
+- Format your responses as plain text only. Never use markdown formatting such as asterisks, bold, headers, or numbered lists with bold labels."""),
 ])
 
 # ---------- Retriever ----------
@@ -160,7 +167,7 @@ def main():
                 {"question": question},
                 config=config,
             )
-            print(response)
+            print(response.replace("**", "").replace("*", ""))
         except Exception as e:
             print(f"\nError: {e}")
 

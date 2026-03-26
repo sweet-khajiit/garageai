@@ -27,7 +27,9 @@ def collect_complaints():
     resp.raise_for_status()
     data = resp.json()
 
-    complaints = data.get("results", [])
+    complaints = data.get("results") or data.get("Results", [])
+    if isinstance(data, list):
+        complaints = data
     print(f"Found {len(complaints)} complaints")
 
     # Save raw JSON
@@ -39,13 +41,13 @@ def collect_complaints():
     # Also save as readable text documents for RAG ingestion
     docs = []
     for c in complaints:
-        component = c.get("components", "Unknown")
-        summary = c.get("summary", "No summary")
-        date = c.get("dateComplaintFiled", "Unknown date")
-        crash = c.get("crash", "No")
-        fire = c.get("fire", "No")
-        injuries = c.get("numberOfInjuries", 0)
-        odiNumber = c.get("odiNumber", "N/A")
+        component = c.get("components") or c.get("Components", "Unknown")
+        summary = c.get("summary") or c.get("Summary", "No summary")
+        date = c.get("dateComplaintFiled") or c.get("DateComplaintFiled", "Unknown date")
+        crash = c.get("crash") or c.get("Crash", "No")
+        fire = c.get("fire") or c.get("Fire", "No")
+        injuries = c.get("numberOfInjuries") or c.get("NumberOfInjuries", 0)
+        odiNumber = c.get("odiNumber") or c.get("ODINumber", "N/A")
 
         doc = (
             f"NHTSA Complaint #{odiNumber}\n"
@@ -74,7 +76,9 @@ def collect_recalls():
     resp.raise_for_status()
     data = resp.json()
 
-    recalls = data.get("results", [])
+    recalls = data.get("results") or data.get("Results", [])
+    if isinstance(data, list):
+        recalls = data
     print(f"Found {len(recalls)} recalls")
 
     # Save raw JSON
@@ -86,12 +90,12 @@ def collect_recalls():
     # Save as readable text
     docs = []
     for r in recalls:
-        campaign = r.get("nhtsaCampaignNumber", "N/A")
-        component = r.get("component", "Unknown")
-        summary = r.get("summary", "No summary")
-        consequence = r.get("consequence", "Unknown")
-        remedy = r.get("remedy", "Unknown")
-        report_date = r.get("reportReceivedDate", "Unknown")
+        campaign = r.get("nhtsaCampaignNumber") or r.get("NHTSACampaignNumber", "N/A")
+        component = r.get("component") or r.get("Component", "Unknown")
+        summary = r.get("summary") or r.get("Summary", "No summary")
+        consequence = r.get("consequence") or r.get("Consequence", "Unknown")
+        remedy = r.get("remedy") or r.get("Remedy", "Unknown")
+        report_date = r.get("reportReceivedDate") or r.get("ReportReceivedDate", "Unknown")
 
         doc = (
             f"NHTSA Recall Campaign #{campaign}\n"
